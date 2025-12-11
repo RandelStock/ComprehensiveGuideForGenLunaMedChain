@@ -307,6 +307,7 @@
             <li><a href="#verification">Verification Tools</a></li>
             <li><a href="#security">Security and Access Control</a></li>
             <li><a href="#troubleshooting">Troubleshooting</a></li>
+            <li><a href="#deep-dive">System Deep Dive</a></li>
         </ul>
     </div>
 
@@ -389,12 +390,412 @@
                     <li>deploy-all.sh</li>
                 </ul>
             </div>
+    </div>
+    </div>
+
+    <div class="section" id="deep-dive">
+        <h2 class="section-title">
+            <span class="section-number">2</span>
+            System Deep Dive
+        </h2>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Backend Overview</h3>
+            <div class="steps">
+                <ul>
+                    <li>Express.js API server registers routes in <code>backend/server.js</code> and attaches <code>optionalAuth</code> for wallet-aware requests</li>
+                    <li>Health endpoint at <code>GET /</code> returns status and timestamp</li>
+                    <li>Core routes: <code>/residents</code>, <code>/medicines</code>, <code>/stocks</code>, <code>/releases</code>, <code>/removals</code>, <code>/transactions</code>, <code>/audit</code>, <code>/verify</code>, <code>/users</code>, <code>/blockchain</code>, <code>/schedule</code>, <code>/consultations</code>, <code>/provider-profiles</code></li>
+                    <li>Authentication uses wallet headers and signature verification where required</li>
+                    <li>Barangay-based access control applied via middleware</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">API Endpoints</h3>
+            <div class="steps">
+                <ul>
+                    <li><code>/residents</code> – list, detail, create, update, deactivate, with rich filters and pagination</li>
+                    <li><code>/medicines</code> – CRUD, stock linkage, barangay scoping, blockchain hash storage</li>
+                    <li><code>/stocks</code> and <code>/stock-transactions</code> – batch numbers, quantities, transaction logs</li>
+                    <li><code>/releases</code> – issue medicines to residents, receipt generation, on-chain hashing</li>
+                    <li><code>/removals</code> – record expiries/damages/losses with audit and blockchain proof</li>
+                    <li><code>/consultations</code> – booking, assignment, status flow, statistics</li>
+                    <li><code>/provider-profiles</code> – provider info, availability, specializations</li>
+                    <li><code>/schedule</code> – calendar events per center type and barangay</li>
+                    <li><code>/audit</code> – audit log querying with scope and date filters</li>
+                    <li><code>/verify</code> – integrity checks and batch verifications for medicines and removals</li>
+                    <li><code>/blockchain</code> – hash listings and on-chain verification helpers</li>
+                    <li><code>/users</code> – role lookup by wallet and current user info</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Database (Prisma + PostgreSQL)</h3>
+            <div class="steps">
+                <ul>
+                    <li>Models include: <code>users</code>, <code>medicine_records</code>, <code>medicine_stocks</code>, <code>stock_transactions</code>, <code>residents</code>, <code>medicine_releases</code>, <code>stock_removals</code>, <code>blockchain_transactions</code>, <code>sync_status</code>, <code>audit_log</code>, <code>barangay_health_centers</code>, <code>calendar_events</code>, <code>consultations</code>, <code>provider_availability</code>, <code>provider_specializations</code></li>
+                    <li>Enums define roles, barangays, consultation types/status, center types</li>
+                    <li>Relations capture who created/released/removed items and link records to residents</li>
+                    <li>Blockchain linkage fields (<code>blockchain_hash</code>, <code>blockchain_tx_hash</code>) present on medicines, stocks, releases, removals, consultations</li>
+                    <li>Indices support fast filtering by barangay, status, dates, and roles</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Blockchain Integration</h3>
+            <div class="steps">
+                <ul>
+                    <li>Smart contract <code>MedicineInventory</code> stores immutable hashes and emits events for store, update, delete</li>
+                    <li>ABI loaded from <code>backend/abi/ContractABI.json</code>; network configured via <code>BLOCKCHAIN_RPC_URL</code> and <code>CONTRACT_ADDRESS</code></li>
+                    <li>Hardhat config supports <code>localhost</code>, <code>mumbai</code>, <code>sepolia</code>, and <code>polygonAmoy</code></li>
+                    <li>Backend uses <code>ethers</code> for JSON-RPC and contract calls; frontend uses <code>@thirdweb-dev/react</code> for wallet address and role binding</li>
+                    <li>Verification endpoints compare database-computed hashes to on-chain values and report integrity</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Frontend Components</h3>
+            <div class="steps">
+                <ul>
+                    <li>Dashboards: Admin, Staff, Patient</li>
+                    <li>Medicine: list, add/edit, stock add, releases, removals, histories</li>
+                    <li>Residents: list, add, dashboard, profile modal</li>
+                    <li>Consultation: booking page, calendar, statistics, provider management</li>
+                    <li>Audit & Blockchain: audit logs, blockchain history, transaction history</li>
+                    <li>Common: sidebar, navbar, protected routes, role provider</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Styling and UX</h3>
+            <div class="steps">
+                <ul>
+                    <li>Tailwind CSS configured via <code>tailwind.config.js</code>; utility-first styling across views</li>
+                    <li>Lucide and <code>react-icons</code> provide iconography; consistent card and table patterns</li>
+                    <li>Charts via <code>chart.js</code> and <code>react-chartjs-2</code> for statistics</li>
+                    <li>PDF/CSV export for blockchain and audit datasets</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Libraries and Tools</h3>
+            <div class="tech-grid">
+                <div class="tech-card"><h3>Frontend</h3><ul>
+                    <li>React 18, Vite</li>
+                    <li>@thirdweb-dev/react, magic-sdk</li>
+                    <li>axios, react-router-dom</li>
+                    <li>chart.js, react-chartjs-2</li>
+                    <li>ethers v5 (frontend), jsPDF, lucide-react</li>
+                    <li>tailwindcss, postcss, autoprefixer</li>
+                </ul></div>
+                <div class="tech-card"><h3>Backend</h3><ul>
+                    <li>Express 5, cors, body-parser</li>
+                    <li>Prisma ORM, @prisma/client</li>
+                    <li>ethers v6, node-cache</li>
+                    <li>nodemailer, @sendgrid/mail</li>
+                    <li>dotenv, hardhat, @openzeppelin/contracts</li>
+                </ul></div>
+            </div>
+        </div>
+
+        <div class="subsection">
+            <h3 class="subsection-title">Simple Interaction Examples</h3>
+            <div class="steps">
+                <ol>
+                    <li><strong>Add Medicine:</strong> Staff opens Add Medicine, submits form. Backend validates and creates <code>medicine_records</code>, computes hash, stores on-chain, saves <code>blockchain_hash</code>/<code>blockchain_tx_hash</code>, logs audit.</li>
+                    <li><strong>Release to Resident:</strong> Staff selects receipt form, chooses stock batch and resident, submits. Backend creates <code>medicine_releases</code>, decrements stock via <code>stock_transactions</code>, stores receipt hash on-chain, emails confirmation if configured.</li>
+                    <li><strong>Record Removal:</strong> Staff records expired or damaged stock. Backend writes <code>stock_removals</code>, generates and verifies hash with blockchain endpoints, updates audit logs.</li>
+                    <li><strong>Book Consultation:</strong> Patient/staff schedules via calendar. Backend persists <code>consultations</code>, assigns provider availability, sends emails, supports status transitions and statistics views.</li>
+                    <li><strong>Verify Integrity:</strong> User navigates to Blockchain History or calls <code>/verify</code> endpoints to compare database and on-chain hashes and export reports.</li>
+                </ol>
+            </div>
+        </div>
+        <div class="subsection">
+            <h3 class="subsection-title">API Reference (Examples)</h3>
+            <div class="steps">
+                <ul>
+                    <li>Base URL: <code>VITE_API_BASE_URL</code></li>
+                    <li>Wallet header: <code>x-wallet-address: 0xYourWallet</code></li>
+                </ul>
+                <div class="info-box">
+                    <strong>Note</strong>
+                    Some endpoints apply barangay-based access. Admin and municipal staff can query other barangays; others are restricted to assigned barangay.
+                </div>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Residents</h4>
+                <ul>
+                    <li><code>GET /residents</code> – filters: <code>barangay</code>, <code>age_category</code>, <code>is_4ps_member</code>, <code>is_pregnant</code>, <code>search</code>, <code>page</code>, <code>limit</code></li>
+                </ul>
+                <pre class="env-vars"><code>curl -s "$BASE/residents?search=juan&amp;page=1&amp;limit=20" \
+ -H "x-wallet-address: 0x123..."</code></pre>
+                <ul>
+                    <li><code>GET /residents/:id</code> – includes recent consultations and releases</li>
+                    <li><code>POST /residents</code> – creates resident, duplicate check unless <code>skip_duplicate_check=true</code></li>
+                </ul>
+                <pre class="env-vars"><code>{
+  "first_name": "Juan",
+  "last_name": "Dela Cruz",
+  "phone": "09123456789",
+  "barangay": "MUNICIPAL",
+  "age": 35,
+  "gender": "MALE"
+}</code></pre>
+                <ul>
+                    <li><code>PUT /residents/:id</code> – updates resident; only admin/staff can change <code>barangay</code></li>
+                    <li><code>DELETE /residents/:id</code> – soft-deletes</li>
+                    <li><code>POST /residents/check-duplicate</code> – quick duplicate detection</li>
+                    <li><code>GET /residents/export/all</code> – optimized export</li>
+                    <li><code>GET /residents/statistics</code>, <code>/residents/statistics/barangay/:barangay</code></li>
+                    <li><code>GET /residents/compare/barangays</code> – admin-only comparison</li>
+                </ul>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Medicines</h4>
+                <ul>
+                    <li><code>GET /medicines</code> – filters: <code>search</code>, <code>category</code>, <code>is_active</code>, <code>page</code>, <code>limit</code></li>
+                    <li><code>GET /medicines/:id</code> – with stocks, releases</li>
+                    <li><code>POST /medicines</code> – creates medicine and initial stock</li>
+                </ul>
+                <pre class="env-vars"><code>{
+  "medicine_name": "Paracetamol",
+  "batch_number": "B-2025-001",
+  "quantity": 500,
+  "expiry_date": "2026-06-30",
+  "unit_cost": 2.5,
+  "supplier_name": "ABC Pharma",
+  "barangay": "MUNICIPAL"
+}</code></pre>
+                <ul>
+                    <li><code>PATCH /medicines/:id</code> – sets <code>blockchain_hash</code>, <code>blockchain_tx_hash</code></li>
+                    <li><code>PUT /medicines/:id</code> – full update with audit</li>
+                    <li><code>DELETE /medicines/:id</code> – soft-delete + blockchain delete and tx log</li>
+                    <li><code>POST /medicines/:id/verify</code> – integrity verification</li>
+                    <li><code>GET /medicines/stats</code>, <code>/medicines/barangay/:barangay</code>, <code>/medicines/compare/barangays</code></li>
+                </ul>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Blockchain</h4>
+                <ul>
+                    <li><code>GET /blockchain/hashes</code> – aggregated hashes from DB with caching</li>
+                    <li><code>POST /blockchain/verify</code> – body: <code>{ recordId, type, hash }</code></li>
+                </ul>
+                <pre class="env-vars"><code>curl -s -X POST "$BASE/blockchain/verify" \
+ -H "Content-Type: application/json" \
+ -d '{"recordId": 123, "type": "medicine", "hash": "0xabc..."}'</code></pre>
+                <ul>
+                    <li><code>GET /blockchain/record/:type/:id</code> – returns stored hash and metadata</li>
+                    <li><code>GET /blockchain/stats</code> – counts by entity type</li>
+                    <li><code>POST /blockchain/invalidate-cache</code> – refresh cached lists</li>
+                </ul>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Provider Profiles</h4>
+                <ul>
+                    <li><code>GET /provider-profiles/:id/available-slots?date=YYYY-MM-DD</code></li>
+                </ul>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Consultations</h4>
+                <ul>
+                    <li><code>GET /consultations/available-doctors</code>, <code>/consultations/available-nurses</code></li>
+                    <li><code>GET /consultations/available-slots?date=YYYY-MM-DD&amp;doctor_id=ID</code></li>
+                    <li><code>POST /consultations</code> – schedules consultation and sends emails</li>
+                </ul>
+                <pre class="env-vars"><code>{
+  "patient_name": "Maria Clara",
+  "patient_phone": "09123456780",
+  "patient_barangay": "MUNICIPAL",
+  "chief_complaint": "Fever",
+  "scheduled_date": "2025-12-20",
+  "scheduled_time": "10:30 AM",
+  "assigned_doctor_id": 7
+}</code></pre>
+                <ul>
+                    <li><code>GET /consultations</code>, <code>GET /consultations/:id</code>, <code>GET /consultations/stats/summary</code></li>
+                    <li><code>PUT /consultations/:id</code> – updates status and sends confirmation/cancellation emails</li>
+                </ul>
+            </div>
+        </div>
+        <div class="subsection">
+            <h3 class="subsection-title">Endpoint Specifications</h3>
+            <div class="steps">
+                <div class="info-box"><strong>Headers</strong> Include <code>x-wallet-address</code> for role-aware access. Some endpoints require admin/municipal roles to query other barangays.</div>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Residents</h4>
+                <ul>
+                    <li><strong>GET</strong> <code>/residents</code></li>
+                    <li><strong>Query</strong> <code>barangay</code>, <code>age_category</code>, <code>is_4ps_member</code>, <code>is_pregnant</code>, <code>search</code>, <code>page</code>, <code>limit</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data:[Resident], pagination:{ page, limit, total, totalPages }, barangay }</code></li>
+                    <li><strong>Errors</strong> 504 timeout; 500 server error</li>
+                </ul>
+
+                <ul>
+                    <li><strong>POST</strong> <code>/residents</code></li>
+                    <li><strong>Body</strong> <code>{ first_name, last_name, phone?, barangay, age?, gender?, date_of_birth?, ... }</code></li>
+                    <li><strong>Response 201</strong> <code>{ success, data: Resident, message }</code></li>
+                    <li><strong>Errors</strong> 400 missing barangay; 409 duplicate found; 500 server error</li>
+                </ul>
+
+                <ul>
+                    <li><strong>PUT</strong> <code>/residents/:id</code></li>
+                    <li><strong>Body</strong> partial resident fields; admin/staff may change <code>barangay</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data: Resident }</code></li>
+                    <li><strong>Errors</strong> 404 not found; 403 access denied; 500 server error</li>
+                </ul>
+
+                <ul>
+                    <li><strong>DELETE</strong> <code>/residents/:id</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, message }</code></li>
+                    <li><strong>Errors</strong> 404 not found; 403 access denied; 500 server error</li>
+                </ul>
+
+                <ul>
+                    <li><strong>POST</strong> <code>/residents/check-duplicate</code></li>
+                    <li><strong>Body</strong> <code>{ first_name, last_name, middle_name?, date_of_birth? }</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, duplicateFound, count?, duplicates? }</code></li>
+                </ul>
+
+                <ul>
+                    <li><strong>GET</strong> <code>/residents/export/all</code></li>
+                    <li><strong>Query</strong> <code>barangay?</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data:[ResidentLite], count, barangay }</code></li>
+                    <li><strong>Errors</strong> 500 export failed</li>
+                </ul>
+
+                <ul>
+                    <li><strong>GET</strong> <code>/residents/statistics</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, stats:{ totals... }, barangay }</code></li>
+                </ul>
+
+                <ul>
+                    <li><strong>GET</strong> <code>/residents/compare/barangays</code> (admin)</li>
+                    <li><strong>Response 200</strong> <code>{ success, data:[{ barangay, total, fourPsMembers, pregnant, seniorCitizens, birthRegistered }] }</code></li>
+                    <li><strong>Errors</strong> 403 access denied</li>
+                </ul>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Medicines</h4>
+                <ul>
+                    <li><strong>GET</strong> <code>/medicines</code></li>
+                    <li><strong>Query</strong> <code>search</code>, <code>category</code>, <code>is_active</code>, <code>page</code>, <code>limit</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data:[MedicineWithStats], pagination, barangay, userRole }</code></li>
+                </ul>
+
+                <ul>
+                    <li><strong>GET</strong> <code>/medicines/:id</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data: Medicine{ stocks[], releases[] } }</code></li>
+                    <li><strong>Errors</strong> 400 invalid id; 404 not found</li>
+                </ul>
+
+                <ul>
+                    <li><strong>POST</strong> <code>/medicines</code></li>
+                    <li><strong>Body</strong> <code>{ medicine_name, batch_number, quantity, expiry_date, unit_cost?, supplier_name?, barangay? }</code></li>
+                    <li><strong>Response 201</strong> <code>{ success, medicine, stock, message }</code></li>
+                    <li><strong>Errors</strong> 400 missing fields; 400 invalid quantity/expiry; 400 batch exists; 500 server error</li>
+                </ul>
+
+                <ul>
+                    <li><strong>PATCH</strong> <code>/medicines/:id</code></li>
+                    <li><strong>Body</strong> <code>{ blockchain_hash?, blockchain_tx_hash?, transaction_hash? }</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, medicine }</code></li>
+                    <li><strong>Errors</strong> 404 not found; 403 access denied</li>
+                </ul>
+
+                <ul>
+                    <li><strong>PUT</strong> <code>/medicines/:id</code></li>
+                    <li><strong>Body</strong> core medicine fields; admin/staff may change <code>barangay</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, medicine }</code> with audit log created</li>
+                </ul>
+
+                <ul>
+                    <li><strong>DELETE</strong> <code>/medicines/:id</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, message, blockchain_tx_hash? }</code></li>
+                    <li><strong>Errors</strong> 404 not found; 403 access denied; blockchain delete may fail silently</li>
+                </ul>
+
+                <ul>
+                    <li><strong>POST</strong> <code>/medicines/:id/verify</code></li>
+                    <li><strong>Response 200</strong> <code>{ verified, storedHash, reconstructedHash, data, barangay, message }</code></li>
+                    <li><strong>Errors</strong> 400 missing hash/stock; 404 not found</li>
+                </ul>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Blockchain</h4>
+                <ul>
+                    <li><strong>GET</strong> <code>/blockchain/hashes</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, hashes:[{ type, recordId, hash, addedBy, addedByName, timestamp, exists, txHash }], counts }</code></li>
+                </ul>
+
+                <ul>
+                    <li><strong>POST</strong> <code>/blockchain/verify</code></li>
+                    <li><strong>Body</strong> <code>{ recordId:number, type:"medicine|stock|receipt|removal", hash }</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, verified, databaseHash, providedHash, message }</code></li>
+                    <li><strong>Errors</strong> 400 missing params; 400 invalid type; 200 not-exist/no-hash messages</li>
+                </ul>
+
+                <ul>
+                    <li><strong>GET</strong> <code>/blockchain/record/:type/:id</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data:{ type, recordId, hash, addedBy, timestamp, exists, txHash } }</code></li>
+                    <li><strong>Errors</strong> 400 invalid type; 404 not found</li>
+                </ul>
+
+                <ul>
+                    <li><strong>GET</strong> <code>/blockchain/stats</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, stats:{ medicineCount, stockCount, receiptCount, removalCount, totalRecords } }</code></li>
+                </ul>
+
+                <ul>
+                    <li><strong>POST</strong> <code>/blockchain/invalidate-cache</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, message }</code></li>
+                </ul>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Provider Profiles</h4>
+                <ul>
+                    <li><strong>GET</strong> <code>/provider-profiles/:id/available-slots</code></li>
+                    <li><strong>Query</strong> <code>date</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data:[{ time, available }], availability:{ day, start_time, end_time, break_time?, slot_duration, max_consultations } }</code></li>
+                    <li><strong>Errors</strong> 400 invalid provider/date; 200 no availability</li>
+                </ul>
+
+                <h4 style="margin: 18px 0 8px; color:#1e40af;">Consultations</h4>
+                <ul>
+                    <li><strong>GET</strong> <code>/consultations/available-doctors</code> | <code>/consultations/available-nurses</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data:[{ user_id, full_name, email, phone, assigned_barangay, provider_specializations[] }] }</code></li>
+                </ul>
+
+                <ul>
+                    <li><strong>GET</strong> <code>/consultations/available-slots</code></li>
+                    <li><strong>Query</strong> <code>date</code>, <code>doctor_id?</code>, <code>nurse_id?</code></li>
+                    <li><strong>Response 200</strong> <code>{ success, data:[{ time, available }], date }</code></li>
+                    <li><strong>Errors</strong> 400 missing date</li>
+                </ul>
+
+                    <ul>
+                    <li><strong>POST</strong> <code>/consultations</code></li>
+                    <li><strong>Body</strong> patient + scheduling fields</li>
+                    <li><strong>Response 201</strong> <code>{ success, data: Consultation, resident:{ id, action, matchedBy, message }, message }</code></li>
+                    <li><strong>Errors</strong> 400 missing required; 400 past time; 400 slot unavailable</li>
+                </ul>
+
+                <ul>
+                    <li><strong>GET</strong> <code>/consultations</code> | <code>/consultations/:id</code> | <code>/consultations/stats/summary</code></li>
+                    <li><strong>Response 200</strong> standard pagination for list; full details for single; stats summary counts</li>
+                </ul>
+
+                <ul>
+                    <li><strong>PUT</strong> <code>/consultations/:id</code></li>
+                    <li><strong>Body</strong> status, notes, diagnosis, prescription, follow-up fields</li>
+                    <li><strong>Response 200</strong> <code>{ success, data: Consultation, message }</code> with emails on status change</li>
+                    <li><strong>Errors</strong> 400 invalid id; 404 not found</li>
+                </ul>
+            </div>
         </div>
     </div>
 
     <div class="section" id="deployment">
         <h2 class="section-title">
-            <span class="section-number">2</span>
+            <span class="section-number">3</span>
             Deployment and Environment
         </h2>
         
@@ -439,7 +840,7 @@
 
     <div class="section" id="getting-started">
         <h2 class="section-title">
-            <span class="section-number">3</span>
+            <span class="section-number">4</span>
             Getting Started
         </h2>
         
@@ -457,7 +858,7 @@
 
     <div class="section" id="medicine">
         <h2 class="section-title">
-            <span class="section-number">4</span>
+            <span class="section-number">5</span>
             Medicine Management
         </h2>
         
@@ -576,7 +977,7 @@
 
     <div class="section" id="stock">
         <h2 class="section-title">
-            <span class="section-number">5</span>
+            <span class="section-number">6</span>
             Stock Management
         </h2>
         
@@ -674,7 +1075,7 @@
 
     <div class="section" id="consultation">
         <h2 class="section-title">
-            <span class="section-number">6</span>
+            <span class="section-number">7</span>
             Consultation Booking and Scheduling
         </h2>
         
@@ -718,7 +1119,7 @@
 
     <div class="section" id="residents">
         <h2 class="section-title">
-            <span class="section-number">7</span>
+            <span class="section-number">8</span>
             Resident Management
         </h2>
         
@@ -756,7 +1157,7 @@
 
     <div class="section" id="user-role">
         <h2 class="section-title">
-            <span class="section-number">8</span>
+            <span class="section-number">9</span>
             User Role Management (Admin Only)
         </h2>
         
@@ -783,7 +1184,7 @@
 
     <div class="section" id="barangay">
         <h2 class="section-title">
-            <span class="section-number">9</span>
+            <span class="section-number">10</span>
             Barangay-Specific Features
         </h2>
         
@@ -812,7 +1213,7 @@
 
     <div class="section" id="blockchain">
         <h2 class="section-title">
-            <span class="section-number">10</span>
+            <span class="section-number">11</span>
             Blockchain Integration Features
         </h2>
         
@@ -841,7 +1242,7 @@
 
     <div class="section" id="reports">
         <h2 class="section-title">
-            <span class="section-number">11</span>
+            <span class="section-number">12</span>
             Reports and Analytics
         </h2>
         
@@ -872,7 +1273,7 @@
 
     <div class="section" id="receipts">
         <h2 class="section-title">
-            <span class="section-number">12</span>
+            <span class="section-number">13</span>
             Receipts and Financial Records
         </h2>
         
@@ -909,7 +1310,7 @@
 
     <div class="section" id="audit">
         <h2 class="section-title">
-            <span class="section-number">13</span>
+            <span class="section-number">14</span>
             Audit Logs
         </h2>
         
@@ -935,7 +1336,7 @@
 
     <div class="section" id="providers">
         <h2 class="section-title">
-            <span class="section-number">14</span>
+            <span class="section-number">15</span>
             Provider Profiles and Availability
         </h2>
         
@@ -962,7 +1363,7 @@
 
     <div class="section" id="statistics">
         <h2 class="section-title">
-            <span class="section-number">15</span>
+            <span class="section-number">16</span>
             Resident Statistics Dashboard
         </h2>
         
@@ -988,7 +1389,7 @@
 
     <div class="section" id="verification">
         <h2 class="section-title">
-            <span class="section-number">16</span>
+            <span class="section-number">17</span>
             Verification Tools
         </h2>
         
@@ -1023,7 +1424,7 @@
 
     <div class="section" id="security">
         <h2 class="section-title">
-            <span class="section-number">17</span>
+            <span class="section-number">18</span>
             Security and Access Control
         </h2>
         
@@ -1057,7 +1458,7 @@
 
     <div class="section" id="troubleshooting">
         <h2 class="section-title">
-            <span class="section-number">18</span>
+            <span class="section-number">19</span>
             Troubleshooting
         </h2>
         
@@ -1108,5 +1509,4 @@
     </div>
 
 </body>
-
 </html>
